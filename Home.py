@@ -59,6 +59,11 @@ col_btn, _ = st.columns([1, 2])
 with col_btn:
     if st.button("Calculate BMI", key="calc_bmi", use_container_width=True):
         bmi = round(weight / ((height / 100) ** 2), 1)
+
+         # Save user information
+    st.session_state['height'] = height
+    st.session_state['weight'] = weight
+    st.session_state['age'] = age
         st.session_state['bmi'] = bmi
 
         if bmi < 18.5:
