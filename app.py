@@ -10,6 +10,7 @@ Deps: pip install streamlit plotly pandas
 import os
 import io
 import datetime
+from typing import Optional, Tuple, List
 import streamlit as st
 import plotly.graph_objects as go
 import plotly.express as px
@@ -19,7 +20,7 @@ import pandas as pd
 # Set GEMINI_API_KEY in your environment or Streamlit secrets to enable AI meal generation.
 # Example (terminal):  set GEMINI_API_KEY=your_key_here
 # Example (Streamlit Cloud): add key via the Streamlit Cloud dashboard → App settings → Secrets
-def _get_gemini_key() -> str | None:
+def _get_gemini_key() -> Optional[str]:
     """Safely retrieve Gemini API key — never crashes if secrets.toml is absent."""
     key = os.environ.get("GEMINI_API_KEY")
     if key:
@@ -257,7 +258,7 @@ def bmi_color(category: str) -> str:
 # PROFILE VALIDATION
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def validate_profile() -> tuple[bool, list[str]]:
+def validate_profile() -> Tuple[bool, List[str]]:
     """Return (is_valid, list_of_missing_fields)."""
     missing = []
     if not st.session_state.get("profile_saved"):
@@ -375,7 +376,7 @@ def generate_meal_plan(diet_type: str, allergies: list[str], goal: str) -> dict:
 # AI MEAL PLAN (Gemini) — optional
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def generate_ai_meal_plan(profile: dict) -> dict | None:
+def generate_ai_meal_plan(profile: dict) -> Optional[dict]:
     """
     Try to generate a 7-day meal plan via Gemini API.
     Returns parsed dict or None on failure.
