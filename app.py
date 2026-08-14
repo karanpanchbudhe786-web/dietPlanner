@@ -12,9 +12,12 @@ import io
 import datetime
 from typing import Optional, Tuple, List
 import streamlit as st
-import plotly.graph_objects as go
-import plotly.express as px
 import pandas as pd
+import matplotlib
+matplotlib.use("Agg")  # non-interactive backend — works on all servers
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import numpy as np
 
 # ─── Optional: Gemini AI integration ────────────────────────────────────────
 # Set GEMINI_API_KEY in your environment or Streamlit secrets to enable AI meal generation.
@@ -624,30 +627,41 @@ def render_profile_tab():
             </div>
             """, unsafe_allow_html=True)
 
-            # BMI gauge
-            fig = go.Figure(go.Indicator(
-                mode="gauge+number",
-                value=bmi,
-                number={"suffix": "", "font": {"size": 24}},
-                gauge={
-                    "axis": {"range": [10, 40], "tickwidth": 1, "tickcolor": "#374151"},
-                    "bar": {"color": color, "thickness": 0.3},
-                    "bgcolor": "white",
-                    "steps": [
-                        {"range": [10, 18.5], "color": "#dbeafe"},
-                        {"range": [18.5, 25],  "color": "#d1fae5"},
-                        {"range": [25, 30],    "color": "#fef3c7"},
-                        {"range": [30, 40],    "color": "#fee2e2"},
-                    ],
-                    "threshold": {"line": {"color": color, "width": 3}, "thickness": 0.75, "value": bmi},
-                },
-                domain={"x": [0, 1], "y": [0, 1]},
-            ))
-            fig.update_layout(
-                height=200, margin=dict(l=20, r=20, t=20, b=10),
-                paper_bgcolor="rgba(0,0,0,0)", font={"family": "Inter"},
-            )
-            st.plotly_chart(fig, use_container_width=True)
+            # ── BMI Gauge (matplotlib — works everywhere) ──
+            fig_bmi, ax = plt.subplots(figsize=(4, 2.2), subplot_kw=dict(polar=False))
+            fig_bmi.patch.set_alpha(0)
+            ax.set_xlim(0, 40)
+            ax.set_ylim(0, 1)
+            ax.axis("off")
+
+            # Coloured segments
+            segments = [(10, 18.5, "#93c5fd"), (18.5, 25, "#6ee7b7"),
+                        (25, 30, "#fcd34d"), (30, 40, "#fca5a5")]
+            for s_start, s_end, s_color in segments:
+                bar = mpatches.FancyArrowPatch(
+                    (s_start, 0.45), (s_end, 0.45),
+                    arrowstyle=mpatches.ArrowStyle.Simple(head_width=0, tail_width=18),
+                    color=s_color, alpha=0.85
+                )
+                ax.add_patch(bar)
+
+            # Needle
+            bmi_clamped = min(max(bmi, 10), 40)
+            ax.annotate("", xy=(bmi_clamped, 0.72), xytext=(bmi_clamped, 0.45),
+                        arrowprops=dict(arrowstyle="->", color=color, lw=2.5))
+            ax.axvline(x=bmi_clamped, ymin=0.38, ymax=0.78, color=color, lw=3)
+
+            # Labels
+            for label, pos in [("10",10),("18.5",18.5),("25",25),("30",30),("40",40)]:
+                ax.text(pos, 0.22, label, ha="center", va="center",
+                        fontsize=7, color="#6b7280")
+            for cat, pos in [("Under",14),("Normal",21.75),("Over",27.5),("Obese",35)]:
+                ax.text(pos, 0.62, cat, ha="center", va="center",
+                        fontsize=7.5, color="#374151", fontweight="bold")
+
+            plt.tight_layout(pad=0.1)
+            st.pyplot(fig_bmi)
+            plt.close(fig_bmi)
 
             # Profile summary grid
             st.markdown('<div class="section-title">📋 Profile Summary</div>', unsafe_allow_html=True)
@@ -842,23 +856,26 @@ def render_nutrition_tab():
     }
     macro_vals = macro_map.get(goal, [40, 30, 30])
 
-    fig_pie = go.Figure(go.Pie(
-        labels=["Carbohydrates", "Protein", "Healthy Fats"],
-        values=macro_vals,
-        hole=0.45,
-        marker_colors=["#34d399", "#60a5fa", "#fbbf24"],
-        textinfo="label+percent",
-        textfont_size=13,
-    ))
-    fig_pie.update_layout(
-        height=320, margin=dict(l=10, r=10, t=10, b=10),
-        paper_bgcolor="rgba(0,0,0,0)",
-        showlegend=True,
-        font={"family": "Inter"},
-    )
     col_pie, col_tips = st.columns([1, 1])
     with col_pie:
-        st.plotly_chart(fig_pie, use_container_width=True)
+        # ── Macro donut chart (matplotlib) ──
+        labels_m = ["Carbohydrates", "Protein", "Healthy Fats"]
+        colors_m = ["#34d399", "#60a5fa", "#fbbf24"]
+        fig_m, ax_m = plt.subplots(figsize=(4, 4))
+        fig_m.patch.set_alpha(0)
+        wedges, texts, autotexts = ax_m.pie(
+            macro_vals, labels=labels_m, colors=colors_m,
+            autopct="%1.0f%%", startangle=90,
+            wedgeprops=dict(width=0.5, edgecolor="white", linewidth=2),
+            textprops=dict(fontsize=11),
+        )
+        for at in autotexts:
+            at.set_fontsize(10)
+            at.set_fontweight("bold")
+        ax_m.set_aspect("equal")
+        plt.tight_layout(pad=0.5)
+        st.pyplot(fig_m)
+        plt.close(fig_m)
     with col_tips:
         st.markdown("**Nutrition Tips for Your Goal:**")
         tips_map = {
@@ -1024,31 +1041,39 @@ def render_progress_tab():
             s2.metric("Lowest Logged",  f"{df['weight'].min()} kg")
             s3.metric("Entries",        len(df))
 
-            # Chart
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(
-                x=df["date"], y=df["weight"],
-                mode="lines+markers",
-                name="Weight",
-                line=dict(color="#40916c", width=2.5, shape="spline"),
-                marker=dict(size=8, color="#40916c", line=dict(width=2, color="white")),
-                fill="tozeroy",
-                fillcolor="rgba(64, 145, 108, 0.08)",
-                text=df.get("note", ""),
-                hovertemplate="<b>%{x|%d %b %Y}</b><br>Weight: %{y} kg<br>Note: %{text}<extra></extra>",
-            ))
-            fig.update_layout(
-                title={"text": "Weight Trend", "font": {"size": 16, "family": "Inter"}, "x": 0},
-                xaxis_title="Date", yaxis_title="Weight (kg)",
-                height=380,
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
-                font={"family": "Inter"},
-                margin=dict(l=10, r=10, t=40, b=10),
-                xaxis=dict(showgrid=False, zeroline=False),
-                yaxis=dict(showgrid=True, gridcolor="#f3f4f6", zeroline=False),
-            )
-            st.plotly_chart(fig, use_container_width=True)
+            # ── Weight trend chart (matplotlib) ──
+            fig_w, ax_w = plt.subplots(figsize=(7, 3.5))
+            fig_w.patch.set_alpha(0)
+            ax_w.set_facecolor("#f9fafb")
+            dates_plot = df["date"].dt.strftime("%d %b")
+            weights_plot = df["weight"].tolist()
+
+            ax_w.fill_between(dates_plot, weights_plot,
+                              min(weights_plot) - 1,
+                              alpha=0.12, color="#40916c")
+            ax_w.plot(dates_plot, weights_plot,
+                      color="#40916c", linewidth=2.5,
+                      marker="o", markersize=7,
+                      markerfacecolor="white", markeredgewidth=2,
+                      markeredgecolor="#40916c")
+
+            # Annotate each point
+            for xi, (d, w) in enumerate(zip(dates_plot, weights_plot)):
+                ax_w.annotate(f"{w} kg", (d, w),
+                              textcoords="offset points", xytext=(0, 10),
+                              ha="center", fontsize=8, color="#374151")
+
+            ax_w.set_title("Weight Trend", fontsize=13,
+                           fontweight="bold", color="#1b4332", pad=8)
+            ax_w.set_ylabel("Weight (kg)", fontsize=9, color="#6b7280")
+            ax_w.tick_params(axis="x", labelsize=8, rotation=30)
+            ax_w.tick_params(axis="y", labelsize=8)
+            ax_w.grid(axis="y", linestyle="--", alpha=0.4, color="#d1d5db")
+            ax_w.spines[["top","right"]].set_visible(False)
+            ax_w.spines[["left","bottom"]].set_color("#e5e7eb")
+            plt.tight_layout()
+            st.pyplot(fig_w)
+            plt.close(fig_w)
 
             st.markdown('<div class="disclaimer">⚠️ Healthy weight change is gradual. Avoid rapid weight loss. This tool tracks trends only — it is not a medical monitoring system.</div>', unsafe_allow_html=True)
 
