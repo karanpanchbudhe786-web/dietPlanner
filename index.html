@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🥗 AI Diet Planner</title>
+<meta name="description" content="Personalized nutrition and healthy lifestyle planning — 7-day meal plans, BMI calculator, wellness & progress tracking.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green-dark:#1b4332;--green-mid:#2d6a4f;--green:#40916c;--green-light:#d1fae5;
+  --gray-50:#f8fafc;--gray-100:#f1f5f9;--gray-200:#e2e8f0;--gray-400:#94a3b8;
+  --gray-600:#475569;--gray-700:#334155;--gray-900:#0f172a;
+  --blue:#3b82f6;--yellow:#f59e0b;--red:#ef4444;
+  --shadow:0 2px 12px rgba(0,0,0,.05);--radius:14px;--radius-sm:10px;
+}
+body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-700);line-height:1.5;min-height:100vh}
+/* ── Header ── */
+.header{background:linear-gradient(135deg,var(--green-dark) 0%,var(--green-mid) 50%,var(--green) 100%);padding:1.8rem 2.2rem;color:#fff;margin-bottom:1.2rem;box-shadow:0 4px 20px rgba(27,67,50,0.2)}
+.header h1{font-size:2.1rem;font-weight:800;letter-spacing:-.5px}
+.header p{font-size:.95rem;opacity:.9;font-weight:300;margin-top:.2rem}
+.container{max-width:1100px;margin:0 auto;padding:0 1rem 3rem}
+/* ── Profile Summary Bar ── */
+.profile-bar{background:#fff;border-radius:12px;padding:.85rem 1.4rem;margin-bottom:1.2rem;box-shadow:var(--shadow);display:flex;gap:1.8rem;flex-wrap:wrap;align-items:center;font-size:.9rem;border-left:4px solid var(--green)}
+.profile-bar.incomplete{border-left:4px solid var(--yellow);background:#fffbeb;color:#92400e}
+/* ── Tabs (Exactly 4 Tabs) ── */
+.tabs{display:flex;gap:.4rem;background:#fff;border-radius:12px;padding:.35rem;box-shadow:var(--shadow);margin-bottom:1.2rem;overflow-x:auto}
+.tab-btn{border:none;background:transparent;padding:.5rem 1.2rem;border-radius:9px;font-weight:600;font-size:.92rem;cursor:pointer;white-space:nowrap;color:var(--gray-600);font-family:'Inter',sans-serif;transition:all .2s}
+.tab-btn.active{background:var(--green-dark);color:#fff}
+.tab-btn:hover:not(.active){background:var(--gray-100)}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+/* ── Cards ── */
+.card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:1.4rem;margin-bottom:1rem}
+.section-title{font-size:1.15rem;font-weight:700;color:var(--green-dark);margin:.5rem 0 .8rem;display:flex;align-items:center;gap:.4rem}
+/* ── Grid ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem}
+@media(max-width:680px){.grid-2{grid-template-columns:1fr}.grid-3{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:420px){.grid-3{grid-template-columns:1fr}}
+/* ── Form ── */
+.form-group{margin-bottom:1rem}
+label{display:block;font-size:.8rem;font-weight:600;color:var(--gray-600);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.35rem}
+input[type=number],input[type=date],input[type=text],select{width:100%;padding:.65rem .9rem;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:.95rem;font-family:'Inter',sans-serif;color:var(--gray-700);background:#fff;transition:border-color .2s;outline:none}
+input:focus,select:focus{border-color:var(--green)}
+.multiselect{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.3rem}
+.chip{display:flex;align-items:center;gap:.3rem;padding:.35rem .75rem;border-radius:20px;border:1.5px solid var(--gray-200);font-size:.82rem;font-weight:500;cursor:pointer;transition:all .2s;user-select:none;background:#fff}
+.chip.selected{background:var(--green-light);border-color:var(--green);color:var(--green-dark)}
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:.4rem;padding:.7rem 1.4rem;border-radius:var(--radius-sm);font-weight:600;font-size:.9rem;cursor:pointer;border:none;font-family:'Inter',sans-serif;transition:all .2s}
+.btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.15)}
+.btn-primary{background:var(--green-dark);color:#fff}
+.btn-secondary{background:var(--gray-100);color:var(--gray-700)}
+.btn-full{width:100%;justify-content:center}
+/* ── BMI Card ── */
+.bmi-card{text-align:center;padding:1.8rem;background:#fff;border-radius:16px;box-shadow:var(--shadow)}
+.bmi-number{font-size:3.6rem;font-weight:800;line-height:1}
+.bmi-category{font-size:1.15rem;font-weight:600;margin-top:.3rem}
+.bmi-bar-track{height:14px;border-radius:8px;background:linear-gradient(90deg,#93c5fd 0%,#93c5fd 27%,#6ee7b7 27%,#6ee7b7 54%,#fcd34d 54%,#fcd34d 75%,#fca5a5 75%,#fca5a5 100%);position:relative;margin:1.2rem 0 .5rem}
+.bmi-needle{position:absolute;top:-4px;width:4px;height:22px;background:var(--gray-700);border-radius:2px;transform:translateX(-50%);transition:left .5s ease}
+.bmi-labels{display:flex;justify-content:space-between;font-size:.72rem;color:var(--gray-400)}
+/* ── Metric tiles ── */
+.metric-tile{background:#f8fafc;border:1px solid var(--gray-200);border-radius:var(--radius-sm);padding:.85rem;text-align:center}
+.metric-tile .mt-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--gray-400);font-weight:600}
+.metric-tile .mt-value{font-size:1.05rem;font-weight:700;color:var(--green-dark);margin-top:.2rem}
+/* ── Progress bar ── */
+.prog-wrap{margin-bottom:1rem}
+.prog-label-row{display:flex;justify-content:space-between;font-size:.85rem;font-weight:500;margin-bottom:.3rem}
+.prog-track{height:10px;background:var(--gray-100);border-radius:5px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--green-mid),var(--green));border-radius:5px;transition:width .5s ease}
+/* ── Day card ── */
+.day-card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:1.2rem 1.4rem;margin-bottom:.9rem;border-top:4px solid var(--green)}
+.day-title{font-weight:700;color:var(--green-dark);font-size:1.05rem;margin-bottom:.8rem}
+.meal-row{display:flex;gap:.6rem;margin-bottom:.45rem;align-items:baseline}
+.meal-type{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--gray-400);min-width:80px}
+.meal-name{font-size:.92rem;color:var(--gray-700)}
+.allergy-warn{color:var(--yellow);font-size:.78rem;margin-top:.15rem}
+/* ── Water & Progress layout ── */
+.water-display{font-size:3.6rem;font-weight:800;text-align:center;padding:1.2rem 0;line-height:1}
+.water-btns{display:grid;grid-template-columns:repeat(2,1fr);gap:.6rem;margin-bottom:1rem}
+.chart-container{position:relative;height:280px;margin-top:1rem}
+.disclaimer{background:#fef3c7;border:1px solid #f59e0b;border-radius:var(--radius-sm);padding:.75rem 1rem;font-size:.82rem;color:#78350f;margin-top:.8rem;line-height:1.4}
+.alert{border-radius:var(--radius-sm);padding:.85rem 1.1rem;margin-bottom:1rem;font-size:.9rem;font-weight:500}
+.alert-warn{background:#fef3c7;color:#92400e;border-left:4px solid #f59e0b}
+.alert-success{background:var(--green-light);color:var(--green-dark);border-left:4px solid var(--green)}
+.hidden{display:none!important}
+.w-table{width:100%;border-collapse:collapse;font-size:.88rem;margin-top:.8rem}
+.w-table th{background:var(--gray-50);padding:.5rem .8rem;text-align:left;font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:var(--gray-400);border-bottom:1px solid var(--gray-200)}
+.w-table td{padding:.5rem .8rem;border-bottom:1px solid var(--gray-100)}
+.w-table tr:last-child td{border-bottom:none}
+.download-row{display:flex;gap:.8rem;flex-wrap:wrap;margin-top:1rem}
+.header-inner{max-width:1100px;margin:0 auto}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <h1>🥗 AI Diet Planner</h1>
+    <p>Personalized nutrition, hydration tracking & wellness progress dashboard</p>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Top Profile Summary Bar -->
+  <div class="profile-bar incomplete" id="profileBar">
+    <span>⚠️ <strong>Profile not completed</strong> — Fill in your details and click <strong>Save Profile & Calculate BMI</strong>.</span>
+  </div>
+
+  <!-- EXACTLY 4 TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('profile')">🏠 Profile</button>
+    <button class="tab-btn" onclick="switchTab('mealplan')">📋 Meal Plan</button>
+    <button class="tab-btn" onclick="switchTab('nutrition')">📊 Nutrition</button>
+    <button class="tab-btn" onclick="switchTab('wellness')">💧 Wellness & Progress</button>
+  </div>
+
+  <!-- ═══════════ TAB 1: PROFILE ═══════════ -->
+  <div class="tab-pane active" id="tab-profile">
+    <div class="grid-2">
+      <!-- Form -->
+      <div class="card">
+        <div class="section-title">👤 Your Profile</div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Height (cm)</label>
+            <input type="number" id="height" min="80" max="250" step="0.5" value="170">
+          </div>
+          <div class="form-group">
+            <label>Weight (kg)</label>
+            <input type="number" id="weight" min="20" max="300" step="0.5" value="70">
+          </div>
+          <div class="form-group">
+            <label>Age (years)</label>
+            <input type="number" id="age" min="10" max="100" value="25">
+          </div>
+          <div class="form-group">
+            <label>Sex / Gender</label>
+            <select id="gender">
+              <option>Male</option><option>Female</option><option>Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Activity Level</label>
+          <select id="activity">
+            <option>Sedentary</option>
+            <option selected>Moderately Active</option>
+            <option>Lightly Active</option>
+            <option>Very Active</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Dietary Preference</label>
+          <select id="dietType">
+            <option selected>Vegetarian</option>
+            <option>Non-Vegetarian</option>
+            <option>Vegan</option>
+            <option>Eggetarian</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Wellness Goal</label>
+          <select id="goal">
+            <option selected>Balanced Nutrition</option>
+            <option>Muscle &amp; Strength Support</option>
+            <option>Healthy Lifestyle</option>
+            <option>General Fitness</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Food Restrictions / Allergies</label>
+          <div class="multiselect" id="allergyChips">
+            <div class="chip" data-val="Nuts" onclick="toggleChip(this)">🥜 Nuts</div>
+            <div class="chip" data-val="Dairy" onclick="toggleChip(this)">🥛 Dairy</div>
+            <div class="chip" data-val="Gluten" onclick="toggleChip(this)">🌾 Gluten</div>
+            <div class="chip" data-val="Soy" onclick="toggleChip(this)">🫘 Soy</div>
+            <div class="chip" data-val="Eggs" onclick="toggleChip(this)">🥚 Eggs</div>
+          </div>
+        </div>
+        <div id="formError" class="alert alert-warn hidden"></div>
+        <button class="btn btn-primary btn-full" onclick="saveProfile()" style="margin-top:.5rem">
+          💾 Save Profile &amp; Calculate BMI
+        </button>
+      </div>
+
+      <!-- BMI + Summary -->
+      <div>
+        <div id="bmiSection" class="bmi-card hidden">
+          <div style="font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;color:var(--gray-400);font-weight:600">YOUR BMI</div>
+          <div class="bmi-number" id="bmiValue" style="color:var(--green)">—</div>
+          <div class="bmi-category" id="bmiCategory" style="color:var(--green)">—</div>
+          <div class="bmi-bar-track" style="margin-top:1.2rem">
+            <div class="bmi-needle" id="bmiNeedle" style="left:50%"></div>
+          </div>
+          <div class="bmi-labels">
+            <span>10</span><span>18.5</span><span>25</span><span>30</span><span>40</span>
+          </div>
+          <p style="font-size:.75rem;color:var(--gray-400);margin-top:.8rem">BMI is a general screening measure and does not replace professional medical assessment.</p>
+        </div>
+
+        <div id="profileSummary" class="hidden" style="margin-top:1rem">
+          <div class="section-title">📋 Profile Summary</div>
+          <div class="grid-3" id="summaryGrid"></div>
+        </div>
+
+        <div id="noProfileMsg" class="card" style="text-align:center;padding:3rem 1rem">
+          <div style="font-size:2.8rem">📝</div>
+          <div style="font-weight:700;margin:.8rem 0 .4rem;color:var(--gray-700)">Profile Not Completed</div>
+          <div style="color:var(--gray-400);font-size:.9rem">Fill in the form on the left and click <strong>Save Profile & Calculate BMI</strong>.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ TAB 2: MEAL PLAN ═══════════ -->
+  <div class="tab-pane" id="tab-mealplan">
+    <div id="mealplanGate" class="alert alert-warn hidden">
+      ⚠️ Please complete your profile first — go to the <strong>🏠 Profile</strong> tab and click Save Profile & Calculate BMI.
+    </div>
+    <div id="mealplanContent" class="hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;margin-bottom:.5rem">
+        <div class="section-title" style="margin:0">📋 Your 7-Day Personalised Meal Plan</div>
+        <span style="background:var(--gray-100);color:var(--gray-600);border-radius:6px;padding:3px 10px;font-size:.75rem;font-weight:700">📊 Personalized Rule-Based Plan</span>
+      </div>
+      <div id="goalNote" class="disclaimer hidden"></div>
+      <div id="mealDays"></div>
+      <div class="section-title">⬇️ Download Meal Plan</div>
+      <div class="download-row">
+        <button class="btn btn-primary" onclick="downloadTxt()">📄 Download as TXT</button>
+        <button class="btn btn-secondary" onclick="downloadCsv()">📊 Download as CSV</button>
+      </div>
+      <div class="disclaimer" style="margin-top:.8rem">⚠️ This meal plan is for general wellness guidance only. It is not a medical prescription. Please consult a registered dietitian before making significant dietary changes.</div>
+    </div>
+  </div>
+
+  <!-- ═══════════ TAB 3: NUTRITION ═══════════ -->
+  <div class="tab-pane" id="tab-nutrition">
+    <div id="nutritionGate" class="alert alert-warn hidden">
+      ⚠️ Please complete your profile first.
+    </div>
+    <div id="nutritionContent" class="hidden">
+      <div class="section-title">📊 Nutrition Dashboard</div>
+      <div class="grid-3" id="nutritionMetrics" style="margin-bottom:1rem"></div>
+      <hr style="border:none;border-top:1px solid var(--gray-200);margin:1rem 0">
+      <div class="grid-2">
+        <div class="card">
+          <div class="section-title">🥦 General Nutrition Guide</div>
+          <p style="font-size:.8rem;color:var(--gray-400);margin-bottom:1rem">General healthy eating guidelines — not a personalised medical prescription.</p>
+          <div id="nutritionGuide"></div>
+        </div>
+        <div class="card">
+          <div class="section-title">🍽️ Estimated Macro Ratio</div>
+          <p style="font-size:.8rem;color:var(--gray-400);margin-bottom:.8rem">Approximate target macronutrient distribution for your goal.</p>
+          <div class="chart-container" style="height:240px"><canvas id="macroChart"></canvas></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:0">
+        <div class="section-title">💡 Goal-Specific Nutrition Tips</div>
+        <ul id="nutritionTips" style="padding-left:1.2rem;line-height:2"></ul>
+      </div>
+      <div class="disclaimer">⚠️ These ratios are general wellness guidelines, not a medically prescribed diet plan. Consult a registered dietitian for personalised advice.</div>
+    </div>
+  </div>
+
+  <!-- ═══════════ TAB 4: MERGED WELLNESS & PROGRESS ═══════════ -->
+  <div class="tab-pane" id="tab-wellness">
+    <div class="section-title">💧 Wellness &amp; Progress Dashboard</div>
+    
+    <div class="grid-2">
+      <!-- LEFT: Water Intake -->
+      <div class="card">
+        <div class="section-title">💧 Today's Water Intake</div>
+        <div class="water-display" id="waterDisplay" style="color:var(--blue)">0.00 L</div>
+        <div class="prog-wrap">
+          <div class="prog-label-row">
+            <span>Progress toward ~3L daily reference</span>
+            <span id="waterPct">0%</span>
+          </div>
+          <div class="prog-track"><div class="prog-fill" id="waterFill" style="width:0%"></div></div>
+        </div>
+        <div id="waterStatus" style="text-align:center;font-size:.92rem;font-weight:600;color:var(--gray-600);margin-top:.4rem">Drink water regularly 💧</div>
+        <p style="font-size:.78rem;color:var(--gray-400);margin-top:.8rem;line-height:1.4">Hydration needs vary by individual, activity, environment, and health conditions.</p>
+
+        <div style="font-weight:700;font-size:.85rem;margin:1.2rem 0 .5rem;color:var(--green-dark)">Quick Water Buttons</div>
+        <div class="water-btns">
+          <button class="btn btn-secondary" onclick="addWater(.25)">+ 250 ml<br><small style="font-weight:400">1 glass</small></button>
+          <button class="btn btn-secondary" onclick="addWater(.5)">+ 500 ml<br><small style="font-weight:400">large glass</small></button>
+          <button class="btn btn-secondary" onclick="addWater(.75)">+ 750 ml<br><small style="font-weight:400">bottle</small></button>
+          <button class="btn btn-secondary" onclick="addWater(1)">+ 1.0 L<br><small style="font-weight:400">big bottle</small></button>
+        </div>
+        <div class="form-group">
+          <label>Custom Amount (Litres)</label>
+          <input type="number" id="customWater" min="0.05" max="5" step="0.25" value="0.25">
+        </div>
+        <button class="btn btn-primary btn-full" onclick="addWater(parseFloat(document.getElementById('customWater').value)||0)">➕ Add Custom Amount</button>
+        <button class="btn btn-secondary btn-full" style="margin-top:.5rem" onclick="resetWater()">🔄 Reset Today's Count</button>
+      </div>
+
+      <!-- RIGHT: Log Weight -->
+      <div class="card">
+        <div class="section-title">⚖️ Log Today's Weight</div>
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="logDate">
+        </div>
+        <div class="form-group">
+          <label>Weight (kg)</label>
+          <!-- CRITICAL CONSISTENCY: Defaults to saved profile weight -->
+          <input type="number" id="logWeight" min="20" max="300" step="0.1" value="70">
+        </div>
+        <div class="form-group">
+          <label>Note (optional)</label>
+          <input type="text" id="logNote" placeholder="e.g. Morning fasting, Post workout">
+        </div>
+        <button class="btn btn-primary btn-full" onclick="logWeight()">➕ Log Entry</button>
+        <div id="logMsg" class="alert alert-success hidden" style="margin-top:.8rem"></div>
+
+        <div id="latestLogBox" class="hidden" style="background:var(--gray-100);border-radius:10px;padding:.75rem 1rem;margin-top:1rem;font-size:.88rem"></div>
+      </div>
+    </div>
+
+    <!-- BELOW: Weight Trend Chart & History -->
+    <div class="card" style="margin-top:1rem">
+      <div class="section-title">📈 Weight Trend</div>
+      <div id="noWeightMsg" style="text-align:center;padding:3rem 1rem">
+        <div style="font-size:3rem">📊</div>
+        <div style="font-weight:700;margin:.8rem 0 .3rem;color:var(--gray-700)">No Data Yet</div>
+        <div style="color:var(--gray-400);font-size:.9rem">Log at least one weight entry to see your trend chart.</div>
+      </div>
+      
+      <div id="weightStats" class="grid-3 hidden" style="margin-bottom:1rem"></div>
+      <div class="chart-container hidden" id="weightChartWrap"><canvas id="weightChart"></canvas></div>
+      <div class="disclaimer hidden" id="weightDisclaimer">⚠️ Healthy weight change is gradual. This tool tracks trends only — it is not a medical monitoring system.</div>
+
+      <div id="weightHistorySection" class="hidden" style="margin-top:1.4rem">
+        <div class="section-title">📋 Weight History</div>
+        <table class="w-table"><thead><tr><th>Date</th><th>Weight (kg)</th><th>Note</th></tr></thead>
+        <tbody id="weightTableBody"></tbody></table>
+        <button class="btn btn-secondary" style="margin-top:.8rem" onclick="clearWeightHistory()">🗑️ Clear All Entries</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+// ═══════════════════════════════════════════════════
+// DATA & KNOWLEDGE REPOSITORY
+// ═══════════════════════════════════════════════════
+const MEAL_PLANS = {
+  Vegetarian:{
+    Monday:   {Breakfast:"Masala oats with fruits & chia seeds",Lunch:"Roti, dal makhani, sabzi & fresh salad",Snack:"Mixed fruit bowl",Dinner:"Paneer bhurji with multigrain roti"},
+    Tuesday:  {Breakfast:"Poha with vegetables & lemon",Lunch:"Brown rice, rajma curry & cucumber raita",Snack:"Roasted makhana (fox nuts)",Dinner:"Vegetable daliya (broken wheat) khichdi"},
+    Wednesday:{Breakfast:"Whole wheat upma with vegetables",Lunch:"Chapati, chana masala & green salad",Snack:"Apple with peanut butter",Dinner:"Mixed vegetable soup with toasted multigrain bread"},
+    Thursday: {Breakfast:"Besan chilla with mint chutney",Lunch:"Matar paneer with jeera rice & raita",Snack:"Buttermilk (chaas) & banana",Dinner:"Roti with dal fry & stir-fried spinach"},
+    Friday:   {Breakfast:"Banana smoothie with flaxseed",Lunch:"Palak dal with brown rice & papad",Snack:"Mixed dates & raisins",Dinner:"Vegetable pulao with cucumber raita"},
+    Saturday: {Breakfast:"Idli with sambar & coconut chutney",Lunch:"Aloo gobi sabzi, roti & lassi",Snack:"Steamed corn chaat",Dinner:"Moong dal soup with toast"},
+    Sunday:   {Breakfast:"Whole grain toast with avocado & tomato",Lunch:"Chole with whole wheat bhatura & salad",Snack:"Yoghurt with honey & berries",Dinner:"Kadhi with steamed rice & sautéed veggies"}
+  },
+  "Non-Vegetarian":{
+    Monday:   {Breakfast:"Egg white omelette with multigrain toast",Lunch:"Chicken curry with brown rice & salad",Snack:"Boiled egg & mixed seeds",Dinner:"Grilled fish with steamed vegetables"},
+    Tuesday:  {Breakfast:"Scrambled eggs with spinach & toast",Lunch:"Mutton curry with jeera rice & raita",Snack:"Fresh fruit bowl",Dinner:"Chicken vegetable soup with bread"},
+    Wednesday:{Breakfast:"Chicken keema stuffed paratha with yoghurt",Lunch:"Fish curry with brown rice & cucumber salad",Snack:"Boiled chana with lemon",Dinner:"Egg bhurji with roti & stir-fried greens"},
+    Thursday: {Breakfast:"Oats with banana, seeds & honey",Lunch:"Chicken biryani with cucumber raita",Snack:"Roasted makhana",Dinner:"Prawn masala with multigrain roti"},
+    Friday:   {Breakfast:"Banana protein shake & boiled egg whites",Lunch:"Minced chicken with peas & roti",Snack:"Mixed dates & seeds",Dinner:"Grilled chicken breast with roasted veggies"},
+    Saturday: {Breakfast:"Egg dosa with sambar",Lunch:"Fish tikka with mint chutney & salad",Snack:"Yoghurt with fruit",Dinner:"Chicken broth with toasted sourdough"},
+    Sunday:   {Breakfast:"Whole wheat pancakes with poached eggs",Lunch:"Chicken curry with chapati & garden salad",Snack:"Fresh fruit chaat",Dinner:"Tandoori fish with yellow dal & rice"}
+  },
+  Vegan:{
+    Monday:   {Breakfast:"Overnight oats with almond milk & berries",Lunch:"Rajma curry with brown rice & green salad",Snack:"Apple slices with almond butter",Dinner:"Tofu stir-fry with quinoa & broccoli"},
+    Tuesday:  {Breakfast:"Banana smoothie with oats & chia seeds",Lunch:"Chole (chickpea curry) with roti & salad",Snack:"Mixed sunflower & pumpkin seeds",Dinner:"Vegetable soup with lentil bread"},
+    Wednesday:{Breakfast:"Avocado toast on whole grain bread",Lunch:"Lentil dal with brown rice & steamed greens",Snack:"Roasted chickpeas with chaat masala",Dinner:"Quinoa vegetable khichdi"},
+    Thursday: {Breakfast:"Fruit & seed granola with coconut milk",Lunch:"Tofu scramble with multigrain roti & salad",Snack:"Fresh watermelon slices",Dinner:"Spicy black bean tacos with fresh salsa"},
+    Friday:   {Breakfast:"Green smoothie (spinach, banana, flaxseed)",Lunch:"Mushroom & pea curry with jeera rice",Snack:"Steamed edamame & lemon",Dinner:"Baked sweet potato with chickpea filling"},
+    Saturday: {Breakfast:"Idli with coconut chutney & sambar",Lunch:"Kadala (black chickpea) curry with appam",Snack:"Fresh fruit chaat",Dinner:"Vegetable biryani with vegan cucumber raita"},
+    Sunday:   {Breakfast:"Peanut butter on whole wheat toast & banana",Lunch:"Tempeh curry with brown rice & sautéed kale",Snack:"Mixed seeds & dried fruit",Dinner:"Lentil soup with crusty whole wheat bread"}
+  },
+  Eggetarian:{
+    Monday:   {Breakfast:"Masala egg omelette with multigrain toast",Lunch:"Paneer curry with roti & cucumber salad",Snack:"Boiled egg & fruit bowl",Dinner:"Egg fried brown rice (minimal oil) & salad"},
+    Tuesday:  {Breakfast:"Poha with a boiled egg on the side",Lunch:"Yellow dal, rice & stir-fried vegetables",Snack:"Roasted makhana & banana",Dinner:"Egg curry with multigrain roti"},
+    Wednesday:{Breakfast:"Banana oat smoothie with 2 boiled egg whites",Lunch:"Rajma with jeera rice & raita",Snack:"Apple with peanut butter",Dinner:"Shakshuka (poached eggs in tomato sauce) with toast"},
+    Thursday: {Breakfast:"Egg paratha with yoghurt & mint chutney",Lunch:"Aloo matar with chapati & yellow dal soup",Snack:"Roasted chickpeas with chaat masala",Dinner:"Paneer bhurji with multigrain roti & salad"},
+    Friday:   {Breakfast:"Scrambled eggs with sautéed mushrooms & toast",Lunch:"Chana masala with brown rice & papad",Snack:"Yoghurt with honey & granola",Dinner:"Egg dosa with sambar & coconut chutney"},
+    Saturday: {Breakfast:"French toast with cinnamon & seasonal fruit",Lunch:"Palak paneer with roti & cucumber salad",Snack:"Corn chaat with lemon",Dinner:"Egg drop soup with multigrain toast"},
+    Sunday:   {Breakfast:"Whole grain pancakes with eggs & maple syrup",Lunch:"Matar paneer with jeera rice & salad",Snack:"Mixed fruit bowl",Dinner:"Dal makhani with boiled egg & steamed rice"}
+  }
+};
+const DAYS=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+const ALLERGY_KEYWORDS={Nuts:["nut","peanut","almond","cashew","pistachio","walnut","makhana"],Dairy:["paneer","yoghurt","raita","lassi","butter","ghee","milk","cheese","buttermilk","chaas"],Gluten:["roti","bread","toast","chapati","naan","paratha","upma","poha","semolina","wheat","daliya","bhatura"],Soy:["tofu","soy","edamame","tempeh"],Eggs:["egg","omelette","scrambled","french toast","shakshuka","poached"]};
+const ALLERGY_SUB={Nuts:"Roasted sunflower/pumpkin seeds & fresh fruit",Dairy:"Coconut-based or plant-based alternative",Gluten:"Jowar/bajra roti or brown rice cakes",Soy:"Sprouted lentil or chickpea alternative",Eggs:"Besan chilla (gram flour pancake) or tofu"};
+const GOAL_NOTES={"Balanced Nutrition":"🥗 **Balanced Nutrition Focus**: Build balanced meals with ½ plate vegetables, ¼ protein source, and ¼ whole grains.","Muscle & Strength Support":"💪 **Muscle & Strength Focus**: High-protein density. Ensure adequate protein portion at each meal alongside regular hydration.","Healthy Lifestyle":"🌿 **Healthy Lifestyle Focus**: Focus on unprocessed whole foods, vibrant colours, and dietary fiber.","General Fitness":"🏃 **General Fitness Focus**: Sustained energy release from complex carbohydrates and clean hydration."};
+const MACRO_MAP={"Balanced Nutrition":[40,30,30],"Muscle & Strength Support":[35,40,25],"Healthy Lifestyle":[45,25,30],"General Fitness":[40,30,30]};
+const NUTRITION_GUIDES={
+  "Balanced Nutrition":[{label:"🥩 Protein Sources",pct:70,tip:"Legumes, dairy, eggs, lean meats"},{label:"🥦 Vegetables",pct:80,tip:"Half your plate should be vegetables"},{label:"🍎 Fruits",pct:70,tip:"2–3 portions of whole fruit daily"},{label:"🌾 Whole Grains",pct:75,tip:"Brown rice, oats, whole wheat rotis"},{label:"🫒 Healthy Fats",pct:55,tip:"Nuts, seeds, ghee/oil in balanced moderation"}],
+  "Muscle & Strength Support":[{label:"🥩 Protein Sources",pct:85,tip:"Legumes, paneer, eggs, fish, chicken, tofu"},{label:"🥦 Vegetables",pct:75,tip:"Leafy greens, cruciferous veg, colourful salads"},{label:"🍎 Fruits",pct:60,tip:"Seasonal fruits, berries, citrus"},{label:"🌾 Whole Grains",pct:70,tip:"Brown rice, whole wheat, oats, quinoa"},{label:"🫒 Healthy Fats",pct:50,tip:"Nuts, seeds, olive oil, avocado in moderation"}],
+  "Healthy Lifestyle":[{label:"🥩 Protein Sources",pct:65,tip:"Legumes, paneer, tofu, eggs, beans"},{label:"🥦 Vegetables",pct:90,tip:"Aim for 5+ servings of varied vegetables daily"},{label:"🍎 Fruits",pct:80,tip:"2–3 whole seasonal fruits daily"},{label:"🌾 Whole Grains",pct:80,tip:"Choose whole grains over refined carbohydrates"},{label:"🫒 Healthy Fats",pct:60,tip:"Cold-pressed oils, seeds, nuts in moderation"}],
+  "General Fitness":[{label:"🥩 Protein Sources",pct:70,tip:"Legumes, dairy, eggs, lean meats"},{label:"🥦 Vegetables",pct:80,tip:"Half your plate should be vegetables"},{label:"🍎 Fruits",pct:70,tip:"2–3 portions of whole fruit daily"},{label:"🌾 Whole Grains",pct:75,tip:"Brown rice, oats, whole wheat rotis"},{label:"🫒 Healthy Fats",pct:55,tip:"Nuts, seeds, ghee in moderation"}]
+};
+const NUTRITION_TIPS={"Balanced Nutrition":["Eat a rainbow of vegetables every day","Choose whole grains over ultra-processed foods","Include healthy fats from nuts and seeds","Maintain steady hydration between meals"],"Muscle & Strength Support":["Prioritise a quality protein portion at every meal","Refuel within 45 minutes after strength workouts","Do not cut healthy complex carbs — they fuel training","Combine legumes and grains for complete plant amino acids"],"Healthy Lifestyle":["Minimise ultra-processed snacks and added refined sugars","Cook home-style meals with fresh ingredients","Eat mindfully and chew thoroughly","Incorporate diverse dietary fiber daily"],"General Fitness":["Match overall nutrition intake to daily activity intensity","Hydrate before, during, and after exercise","Keep healthy snacks like fruit and roasted seeds accessible","Maintain consistent meal timings"]};
+
+// ═══════════════════════════════════════════════════
+// STATE INITIALIZATION & LOCAL PERSISTENCE
+// ═══════════════════════════════════════════════════
+let state = {profile:null, water_intake:0, weight_history:[]};
+function loadState(){try{const s=localStorage.getItem('dietPlannerApp');if(s)state=JSON.parse(s);}catch(e){}}
+function saveState(){try{localStorage.setItem('dietPlannerApp',JSON.stringify(state));}catch(e){}}
+loadState();
+
+// ═══════════════════════════════════════════════════
+// NAVIGATION (4 TABS)
+// ═══════════════════════════════════════════════════
+function switchTab(name){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  const btn = document.querySelector(`[onclick="switchTab('${name}')"]`);
+  if(btn) btn.classList.add('active');
+  const pane = document.getElementById('tab-'+name);
+  if(pane) pane.classList.add('active');
+  if(name==='mealplan') renderMealPlan();
+  if(name==='nutrition') renderNutrition();
+  if(name==='wellness') renderWellness();
+}
+
+// ═══════════════════════════════════════════════════
+// BMI CALCULATION
+// ═══════════════════════════════════════════════════
+function calcBMI(w,h){return+(w/((h/100)**2)).toFixed(1)}
+function bmiCategory(b){if(b<18.5)return{cat:'Underweight',color:'#3b82f6'};if(b<25)return{cat:'Normal',color:'#10b981'};if(b<30)return{cat:'Overweight',color:'#f59e0b'};return{cat:'Obese',color:'#ef4444'}}
+function bmiNeedleLeft(b){const clamped=Math.min(Math.max(b,10),40);return((clamped-10)/30*100).toFixed(1)+'%'}
+
+function toggleChip(el){el.classList.toggle('selected')}
+function getSelectedAllergies(){return[...document.querySelectorAll('#allergyChips .chip.selected')].map(c=>c.dataset.val)}
+
+// ═══════════════════════════════════════════════════
+// SAVE PROFILE
+// ═══════════════════════════════════════════════════
+function saveProfile(){
+  const h=parseFloat(document.getElementById('height').value);
+  const w=parseFloat(document.getElementById('weight').value);
+  const a=parseInt(document.getElementById('age').value);
+  const errEl=document.getElementById('formError');
+  errEl.classList.add('hidden');
+
+  const errs=[];
+  if(isNaN(h)||h<80||h>250) errs.push('Please enter a valid height (80–250 cm).');
+  if(isNaN(w)||w<20||w>300) errs.push('Please enter a valid weight (20–300 kg).');
+  if(isNaN(a)||a<10||a>100) errs.push('Please enter a valid age (10–100 years).');
+  if(errs.length){errEl.textContent=errs.join(' ');errEl.classList.remove('hidden');return}
+
+  const bmi=calcBMI(w,h);
+  const {cat,color}=bmiCategory(bmi);
+  const profile={
+    height:h, weight:w, age:a,
+    gender:document.getElementById('gender').value,
+    activity:document.getElementById('activity').value,
+    dietType:document.getElementById('dietType').value,
+    goal:document.getElementById('goal').value,
+    allergies:getSelectedAllergies(),
+    bmi:bmi, bmiCategory:cat
+  };
+  state.profile=profile; saveState();
+
+  // Sync default weight into progress form immediately
+  document.getElementById('logWeight').value = w;
+
+  // Show BMI
+  const bmiSec=document.getElementById('bmiSection');bmiSec.classList.remove('hidden');bmiSec.style.borderTop=`5px solid ${color}`;
+  document.getElementById('bmiValue').textContent=bmi;document.getElementById('bmiValue').style.color=color;
+  document.getElementById('bmiCategory').textContent=cat;document.getElementById('bmiCategory').style.color=color;
+  document.getElementById('bmiNeedle').style.left=bmiNeedleLeft(bmi);
+
+  // Profile Summary Grid
+  document.getElementById('noProfileMsg').classList.add('hidden');
+  document.getElementById('profileSummary').classList.remove('hidden');
+  const items=[['📏 Height',h+' cm'],['⚖️ Weight',w+' kg'],['🎂 Age',a+' yrs'],['⚡ Activity',profile.activity],['🥗 Diet',profile.dietType],['🎯 Goal',profile.goal.split(' ')[0]+'…']];
+  document.getElementById('summaryGrid').innerHTML=items.map(([l,v])=>`<div class="metric-tile"><div class="mt-label">${l}</div><div class="mt-value">${v}</div></div>`).join('');
+
+  // Top Summary Bar
+  const bar=document.getElementById('profileBar');
+  bar.className='profile-bar';
+  bar.innerHTML=`<span><strong>👤 ${profile.gender}, ${a} yrs</strong></span> <span>⚖️ ${w} kg</span> <span>📏 ${h} cm</span> <span>🔢 BMI <strong>${bmi}</strong> (${cat})</span> <span>🥗 ${profile.dietType}</span> <span>🎯 ${profile.goal}</span>`;
+}
+
+// ═══════════════════════════════════════════════════
+// MEAL PLAN
+// ═══════════════════════════════════════════════════
+function safeMeal(txt,allergies){
+  if(!allergies||!allergies.length)return{text:txt,warn:null};
+  const bad=allergies.filter(a=>ALLERGY_KEYWORDS[a]&&ALLERGY_KEYWORDS[a].some(k=>txt.toLowerCase().includes(k)));
+  if(!bad.length)return{text:txt,warn:null};
+  return{text:txt,warn:`⚠️ Restricted item detected (${bad.join(', ')}). Suggested substitute: ${bad.map(a=>ALLERGY_SUB[a]).join(' / ')}`};
+}
+
+function renderMealPlan(){
+  const p=state.profile;
+  const gate=document.getElementById('mealplanGate'),content=document.getElementById('mealplanContent');
+  if(!p){gate.classList.remove('hidden');content.classList.add('hidden');return}
+  gate.classList.add('hidden');content.classList.remove('hidden');
+  const base=MEAL_PLANS[p.dietType]||MEAL_PLANS.Vegetarian;
+  const noteEl=document.getElementById('goalNote');
+  const note=GOAL_NOTES[p.goal];
+  if(note){noteEl.innerHTML=note;noteEl.classList.remove('hidden')}else noteEl.classList.add('hidden');
+  const container=document.getElementById('mealDays');
+  container.innerHTML=DAYS.map(day=>{
+    const meals=base[day];
+    const rows=['Breakfast','Lunch','Snack','Dinner'].map(mt=>{
+      const {text,warn}=safeMeal(meals[mt],p.allergies);
+      return `<div class="meal-row"><span class="meal-type">${{Breakfast:'🌅',Lunch:'☀️',Snack:'🍎',Dinner:'🌙'}[mt]} ${mt}</span><div><span class="meal-name">${text}</span>${warn?`<div class="allergy-warn">${warn}</div>`:''}</div></div>`;
+    }).join('');
+    return `<div class="day-card"><div class="day-title">📅 ${day}</div>${rows}</div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════
+// DOWNLOAD
+// ═══════════════════════════════════════════════════
+function getMealPlanData(){
+  const p=state.profile;if(!p)return null;
+  const base=MEAL_PLANS[p.dietType]||MEAL_PLANS.Vegetarian;
+  return{profile:p,days:DAYS.map(d=>({day:d,...base[d]}))};
+}
+function downloadTxt(){
+  const d=getMealPlanData();if(!d)return;
+  const p=d.profile;
+  let txt=['='.repeat(56),'          🥗  AI DIET PLANNER — 7-DAY MEAL PLAN','='.repeat(56),
+    `  Dietary Preference : ${p.dietType}`,`  Wellness Goal      : ${p.goal}`,
+    `  Food Restrictions  : ${p.allergies.join(', ')||'None'}`,
+    `  Generated On       : ${new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'})}`,
+    '='.repeat(56),''
+  ];
+  d.days.forEach(({day,Breakfast,Lunch,Snack,Dinner})=>{
+    txt.push(`  📅 ${day.toUpperCase()}`,`  ${'-'.repeat(50)}`);
+    [{Breakfast},{Lunch},{Snack},{Dinner}].forEach(o=>{const k=Object.keys(o)[0];txt.push(`  ${k.padEnd(12)}: ${o[k]}`)});
+    txt.push('');
+  });
+  txt.push('─'.repeat(56),'  ⚠️  This plan is for general wellness guidance only.','  Consult a registered dietitian before making dietary changes.','─'.repeat(56));
+  const blob=new Blob([txt.join('\n')],{type:'text/plain'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`meal_plan_${new Date().toISOString().slice(0,10)}.txt`;a.click();
+}
+function downloadCsv(){
+  const d=getMealPlanData();if(!d)return;
+  const rows=['Day,Meal,Menu'];
+  d.days.forEach(({day,Breakfast,Lunch,Snack,Dinner})=>{
+    [{Breakfast},{Lunch},{Snack},{Dinner}].forEach(o=>{const k=Object.keys(o)[0];rows.push(`"${day}","${k}","${o[k].replace(/"/g,"'")}"`);});
+  });
+  const blob=new Blob([rows.join('\n')],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`meal_plan_${new Date().toISOString().slice(0,10)}.csv`;a.click();
+}
+
+// ═══════════════════════════════════════════════════
+// NUTRITION DASHBOARD
+// ═══════════════════════════════════════════════════
+let macroChartInst=null;
+function renderNutrition(){
+  const p=state.profile;
+  if(!p){document.getElementById('nutritionGate').classList.remove('hidden');document.getElementById('nutritionContent').classList.add('hidden');return}
+  document.getElementById('nutritionGate').classList.add('hidden');document.getElementById('nutritionContent').classList.remove('hidden');
+  document.getElementById('nutritionMetrics').innerHTML=[
+    ['BMI',p.bmi,p.bmiCategory],['Diet Preference',p.dietType,''],['Daily Activity',p.activity,''],['Wellness Goal',p.goal,'']
+  ].map(([l,v,s])=>`<div class="metric-tile"><div class="mt-label">${l}</div><div class="mt-value">${v}</div>${s?`<div style="font-size:.72rem;color:var(--gray-400)">${s}</div>`:''}</div>`).join('');
+
+  const guides=NUTRITION_GUIDES[p.goal]||NUTRITION_GUIDES['Balanced Nutrition'];
+  document.getElementById('nutritionGuide').innerHTML=guides.map(g=>`
+    <div class="prog-wrap">
+      <div class="prog-label-row"><span>${g.label}</span><span>${g.pct}% recommended</span></div>
+      <div class="prog-track"><div class="prog-fill" style="width:${g.pct}%"></div></div>
+      <div style="font-size:.77rem;color:var(--gray-400);margin-top:.2rem">${g.tip}</div>
+    </div>`).join('');
+
+  const tips=NUTRITION_TIPS[p.goal]||NUTRITION_TIPS['Balanced Nutrition'];
+  document.getElementById('nutritionTips').innerHTML=tips.map(t=>`<li>✅ ${t}</li>`).join('');
+
+  const vals=MACRO_MAP[p.goal]||MACRO_MAP['Balanced Nutrition'];
+  if(macroChartInst){macroChartInst.destroy();macroChartInst=null}
+  macroChartInst=new Chart(document.getElementById('macroChart'),{
+    type:'doughnut',
+    data:{labels:['Carbohydrates','Protein','Healthy Fats'],datasets:[{data:vals,backgroundColor:['#34d399','#60a5fa','#fbbf24'],borderWidth:3,borderColor:'#fff',hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'50%',plugins:{legend:{position:'bottom',labels:{font:{size:11.5,family:'Inter'},padding:12}}}}
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// WELLNESS & PROGRESS (HYDRATION + WEIGHT)
+// ═══════════════════════════════════════════════════
+let weightChartInst=null;
+
+function renderWater(){
+  const w=+(state.water_intake||0).toFixed(2);
+  const pct=Math.min(w/3,1);
+  document.getElementById('waterDisplay').textContent=w.toFixed(2)+' L';
+  document.getElementById('waterPct').textContent=Math.round(pct*100)+'%';
+  document.getElementById('waterFill').style.width=(pct*100)+'%';
+  const color=pct>=0.8?'var(--green)':pct>=0.5?'var(--blue)':'var(--red)';
+  document.getElementById('waterDisplay').style.color=color;
+  document.getElementById('waterStatus').textContent=pct>=0.8?'Great hydration! 💪':pct>=0.5?'Keep drinking regularly! 👍':'Drink water regularly 💧';
+}
+function addWater(amt){if(isNaN(amt)||amt<=0)return;state.water_intake=+(((state.water_intake||0)+amt)).toFixed(2);saveState();renderWater()}
+function resetWater(){state.water_intake=0;saveState();renderWater()}
+
+function renderWellness(){
+  renderWater();
+  const hist=state.weight_history||[];
+  const sorted=[...hist].sort((a,b)=>a.date.localeCompare(b.date));
+  const noMsg=document.getElementById('noWeightMsg');
+  const statsEl=document.getElementById('weightStats');
+  const chartWrap=document.getElementById('weightChartWrap');
+  const disc=document.getElementById('weightDisclaimer');
+  const histSection=document.getElementById('weightHistorySection');
+  const latestBox=document.getElementById('latestLogBox');
+
+  if(sorted.length>0){
+    noMsg.classList.add('hidden');statsEl.classList.remove('hidden');chartWrap.classList.remove('hidden');disc.classList.remove('hidden');histSection.classList.remove('hidden');
+    const first=sorted[0].weight,last=sorted[sorted.length-1].weight,delta=(last-first).toFixed(1);
+    const minW=Math.min(...sorted.map(e=>e.weight));
+    statsEl.innerHTML=[['Current Logged',last+' kg',(delta>=0?'+':'')+delta+' kg from start'],['Lowest Logged',minW+' kg',''],['Total Entries',sorted.length,'']].map(([l,v,s])=>`<div class="metric-tile"><div class="mt-label">${l}</div><div class="mt-value">${v}</div><div style="font-size:.72rem;color:var(--gray-400)">${s}</div></div>`).join('');
+    
+    latestBox.innerHTML=`<strong>Latest Record:</strong> ${last} kg (${sorted[sorted.length-1].date})${sorted[sorted.length-1].note?`<br><span style="color:var(--gray-400)">Note: ${sorted[sorted.length-1].note}</span>`:''}`;
+    latestBox.classList.remove('hidden');
+
+    if(weightChartInst){weightChartInst.destroy();weightChartInst=null}
+    weightChartInst=new Chart(document.getElementById('weightChart'),{
+      type:'line',
+      data:{labels:sorted.map(e=>new Date(e.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short'})),datasets:[{label:'Weight (kg)',data:sorted.map(e=>e.weight),borderColor:'#2d6a4f',backgroundColor:'rgba(45,106,79,0.1)',borderWidth:2.5,pointRadius:6,pointBackgroundColor:'#fff',pointBorderColor:'#2d6a4f',pointBorderWidth:2.2,tension:.25,fill:true}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:'#f1f5f9'},ticks:{font:{size:11}}},x:{grid:{display:false},ticks:{font:{size:11}}}}}
+    });
+    document.getElementById('weightTableBody').innerHTML=sorted.map(e=>`<tr><td>${e.date}</td><td><strong>${e.weight}</strong></td><td style="color:var(--gray-400)">${e.note||'—'}</td></tr>`).join('');
+  }else{
+    noMsg.classList.remove('hidden');statsEl.classList.add('hidden');chartWrap.classList.add('hidden');disc.classList.add('hidden');histSection.classList.add('hidden');latestBox.classList.add('hidden');
+  }
+}
+
+function logWeight(){
+  const date=document.getElementById('logDate').value;
+  const weight=parseFloat(document.getElementById('logWeight').value);
+  const note=document.getElementById('logNote').value.trim();
+  if(!date||isNaN(weight)||weight<20||weight>300){alert('Please enter a valid date and weight.');return}
+  const hist=state.weight_history||[];
+  const idx=hist.findIndex(e=>e.date===date);
+  if(idx>=0)hist[idx]={date,weight,note};else hist.push({date,weight,note});
+  state.weight_history=hist;saveState();
+  const msg=document.getElementById('logMsg');msg.textContent=idx>=0?'✅ Entry updated!':'✅ Weight logged!';msg.classList.remove('hidden');
+  setTimeout(()=>msg.classList.add('hidden'),2500);
+  renderWellness();
+}
+function clearWeightHistory(){if(!confirm('Clear all weight records?'))return;state.weight_history=[];saveState();renderWellness()}
+
+// Default dates and weights
+document.getElementById('logDate').value=new Date().toISOString().slice(0,10);
+document.getElementById('logWeight').value=state.profile?.weight||70;
+
+// Restore profile if already saved in localStorage
+if(state.profile){
+  const p=state.profile;
+  document.getElementById('height').value=p.height;
+  document.getElementById('weight').value=p.weight;
+  document.getElementById('age').value=p.age;
+  document.getElementById('gender').value=p.gender;
+  document.getElementById('activity').value=p.activity;
+  document.getElementById('dietType').value=p.dietType;
+  document.getElementById('goal').value=p.goal;
+  p.allergies.forEach(a=>{const c=document.querySelector(`#allergyChips .chip[data-val="${a}"]`);if(c)c.classList.add('selected')});
+  saveProfile();
+}
+</script>
+</body>
+</html>
